@@ -9,7 +9,8 @@ Prosty, przyjazny dziennik (PWA) do zapisywania epizodów migreny / bólu głowy
 - Statystyki (miesiąc / 3 miesiące / rok): dni z bólem, średnia siła, wyzwalacze, pogoda, jedzenie, pora dnia, dzień tygodnia, skuteczność leków, powiązanie z cyklem.
 - Eksport raportu dla lekarza (PDF, z polskimi znakami), eksport CSV (Excel), pełna kopia zapasowa JSON (import/eksport, scalanie lub zastępowanie).
 - Tryb ciemny/jasny zgodny z ustawieniami systemu, duże pola dotykowe, obsługa offline (PWA).
-- Faza 2 (opcjonalnie): automatyczne dane pogodowe z Open-Meteo, blokada aplikacji PIN-em.
+- **Automatyczna pogoda** (Open-Meteo): po ustawieniu miasta w Ustawieniach, każdy nowy wpis automatycznie zapisuje temperaturę, ciśnienie (i jego zmianę w ciągu 24h), wilgotność i wiatr dla danego dnia — bez ciągłego śledzenia GPS. Dla świeżych dat korzysta z API prognozy (brak opóźnienia publikacji danych), dla starszych wpisów z API archiwalnego. W statystykach dostępny jest wykres nakładający ciśnienie na siłę bólu, żeby łatwiej zauważyć trend.
+- Opcjonalna blokada aplikacji 4-cyfrowym PIN-em (Ustawienia → Blokada PIN).
 
 ## Wymagania
 
