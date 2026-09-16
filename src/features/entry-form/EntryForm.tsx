@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../lib/db';
 import { storage } from '../../lib/storage';
 import { useOptions, addOptionFactory } from '../../lib/useOptions';
 import { todayISO } from '../../lib/dates';
+import { fetchWeatherForDate } from '../../lib/weather';
 import type { Duration, Entry, Intensity, Medication } from '../../types';
 import DatePickerField from '../../components/DatePickerField';
 import CollapsibleSection from '../../components/CollapsibleSection';
@@ -64,6 +65,34 @@ export default function EntryForm() {
       setLoadedExisting(true);
     }
   }, [existing, loadedExisting]);
+
+  const settings = useLiveQuery(() => db.settings.get('settings'), []);
+  const [weatherStatus, setWeatherStatus] = useState<'idle' | 'loading' | 'error'>('idle');
+  const lastFetchedDateRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const lat = settings?.weatherLat;
+    const lon = settings?.weatherLon;
+    if (lat == null || lon == null || !draft.date) return;
+    if (lastFetchedDateRef.current === draft.date) return;
+    lastFetchedDateRef.current = draft.date;
+
+    let cancelled = false;
+    setWeatherStatus('loading');
+    fetchWeatherForDate(lat, lon, draft.date).then((w) => {
+      if (cancelled) return;
+      if (w) {
+        patch({ autoWeather: w });
+        setWeatherStatus('idle');
+      } else {
+        setWeatherStatus('error');
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft.date, settings?.weatherLat, settings?.weatherLon]);
 
   const locations = useOptions('locations');
   const painType = useOptions('painType');
@@ -181,6 +210,24 @@ export default function EntryForm() {
         </CollapsibleSection>
 
         <CollapsibleSection title="Pogoda">
+          <div className="mb-3">
+            {!settings?.weatherLat ? (
+              <p className="text-xs text-stone-500 dark:text-stone-400">
+                Ustaw miasto w Ustawieniach, aby automatycznie pobierać temperaturę, ciśnienie i wiatr dla tego dnia.
+              </p>
+            ) : weatherStatus === 'loading' ? (
+              <p className="text-xs text-stone-500 dark:text-stone-400">Pobieranie danych pogodowych…</p>
+            ) : draft.autoWeather ? (
+              <div className="rounded-lg bg-stone-50 px-3 py-2 text-xs text-stone-600 dark:bg-stone-900 dark:text-stone-300">
+                Automatycznie: {Math.round(draft.autoWeather.tempC)}°C, {Math.round(draft.autoWeather.pressureHpa)} hPa
+                {' '}({draft.autoWeather.pressureDelta24h >= 0 ? '+' : ''}
+                {Math.round(draft.autoWeather.pressureDelta24h)} hPa/24h), wiatr {Math.round(draft.autoWeather.windKph)} km/h,
+                wilgotność {Math.round(draft.autoWeather.humidity)}%
+              </div>
+            ) : weatherStatus === 'error' ? (
+              <p className="text-xs text-stone-500 dark:text-stone-400">Nie udało się pobrać danych pogodowych (brak internetu?).</p>
+            ) : null}
+          </div>
           <ChipGroup options={weather} selectedIds={draft.weather} onChange={(v) => patch({ weather: v })} onAddOption={addOptionFactory('weather')} />
         </CollapsibleSection>
 

@@ -26,3 +26,7 @@ export function formatMonthPl(d: Date): string {
 export function todayISO(): string {
   return toISODate(new Date());
 }
+
+export function formatShortPl(dateISO: string): string {
+  return format(fromISODate(dateISO), 'd MMM', { locale: pl });
+}

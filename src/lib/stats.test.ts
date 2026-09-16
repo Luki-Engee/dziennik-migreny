@@ -8,6 +8,7 @@ import {
   daysWithPain,
   medEffectiveness,
   menstruationStats,
+  pressureByDay,
   rankOptions,
 } from './stats';
 import type { Entry } from '../types';
@@ -140,5 +141,31 @@ describe('menstruationStats', () => {
 
   it('returns zeros for an empty list', () => {
     expect(menstruationStats([])).toEqual({ onPeriodPct: 0, beforePeriodPct: 0, total: 0 });
+  });
+});
+
+describe('pressureByDay', () => {
+  const withWeather = (partial: Partial<Entry>, pressureHpa: number) =>
+    makeEntry({
+      ...partial,
+      autoWeather: { tempC: 15, pressureHpa, pressureDelta24h: -2, humidity: 60, windKph: 10, fetchedAt: '2026-09-10T00:00:00.000Z' },
+    });
+
+  it('ignores entries without captured weather data', () => {
+    const entries = [makeEntry({ date: '2026-09-10' })];
+    expect(pressureByDay(entries)).toEqual([]);
+  });
+
+  it('averages pressure and takes the max intensity per day, sorted by date', () => {
+    const entries = [
+      withWeather({ date: '2026-09-11', intensity: 3 }, 1000),
+      withWeather({ date: '2026-09-10', intensity: 6 }, 1010),
+      withWeather({ date: '2026-09-10', intensity: 9 }, 1020),
+    ];
+    const result = pressureByDay(entries);
+    expect(result).toEqual([
+      { date: '2026-09-10', intensity: 9, pressureHpa: 1015 },
+      { date: '2026-09-11', intensity: 3, pressureHpa: 1000 },
+    ]);
   });
 });

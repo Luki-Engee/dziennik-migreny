@@ -27,6 +27,8 @@ export interface AutoWeather {
   pressureHpa: number;
   pressureDelta24h: number;
   humidity: number;
+  windKph: number;
+  fetchedAt: string;
 }
 
 export interface Entry {

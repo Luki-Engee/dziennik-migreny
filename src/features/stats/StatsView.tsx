@@ -1,8 +1,20 @@
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+  ComposedChart,
+  Line,
+  Legend,
+} from 'recharts';
 import { db } from '../../lib/db';
 import { useOptions } from '../../lib/useOptions';
+import { formatShortPl } from '../../lib/dates';
 import {
   avgDurationHours,
   avgIntensity,
@@ -14,6 +26,7 @@ import {
   HIGH_MED_DAYS_THRESHOLD,
   medEffectiveness,
   menstruationStats,
+  pressureByDay,
   rankOptions,
   type StatsRange,
 } from '../../lib/stats';
@@ -58,6 +71,10 @@ export default function StatsView() {
   const foodRank = useMemo(() => rankOptions(entries, 'food', food), [entries, food]);
   const meds = useMemo(() => medEffectiveness(entries), [entries]);
   const mens = useMemo(() => menstruationStats(entries), [entries]);
+  const pressure = useMemo(
+    () => pressureByDay(entries).map((p) => ({ ...p, label: formatShortPl(p.date) })),
+    [entries],
+  );
 
   const medDays = daysWithMeds(entries);
   const highMedUsage = medDays >= HIGH_MED_DAYS_THRESHOLD;
@@ -131,6 +148,43 @@ export default function StatsView() {
                 <Bar dataKey="count" fill="#f0a93a" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
+          </div>
+
+          <div className="card p-4">
+            <h3 className="mb-2 font-semibold">Ciśnienie atmosferyczne a ból</h3>
+            {pressure.length === 0 ? (
+              <p className="text-sm text-stone-500 dark:text-stone-400">
+                Brak danych pogodowych dla tego okresu. Ustaw miasto w Ustawieniach, aby przy nowych wpisach
+                automatycznie zapisywać ciśnienie i zobaczyć tu trend.
+              </p>
+            ) : (
+              <ResponsiveContainer width="100%" height={220}>
+                <ComposedChart data={pressure} margin={{ left: -16, right: 4 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="label" tick={{ fontSize: 10 }} />
+                  <YAxis yAxisId="left" domain={[0, 10]} allowDecimals={false} tick={{ fontSize: 11 }} />
+                  <YAxis
+                    yAxisId="right"
+                    orientation="right"
+                    domain={['dataMin - 4', 'dataMax + 4']}
+                    tick={{ fontSize: 11 }}
+                    unit=" hPa"
+                  />
+                  <Tooltip />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Bar yAxisId="left" dataKey="intensity" name="Siła bólu" fill="#ea6a35" radius={[4, 4, 0, 0]} />
+                  <Line
+                    yAxisId="right"
+                    type="monotone"
+                    dataKey="pressureHpa"
+                    name="Ciśnienie (hPa)"
+                    stroke="#2563eb"
+                    strokeWidth={2}
+                    dot={{ r: 2 }}
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+            )}
           </div>
 
           {meds.length > 0 && (

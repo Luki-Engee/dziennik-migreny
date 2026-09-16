@@ -145,3 +145,33 @@ export function menstruationStats(entries: Entry[]): MenstruationStats {
 }
 
 export const HIGH_MED_DAYS_THRESHOLD = 10;
+
+export interface PressurePoint {
+  date: string;
+  intensity: number;
+  pressureHpa: number;
+}
+
+/**
+ * Ciśnienie atmosferyczne nałożone na dni z bólem – tylko dla wpisów, dla których
+ * udało się pobrać automatyczne dane pogodowe (wymaga ustawienia miasta w Ustawieniach).
+ * Gdy tego samego dnia jest kilka epizodów, bierzemy maksymalną siłę bólu i średnie ciśnienie.
+ */
+export function pressureByDay(entries: Entry[]): PressurePoint[] {
+  const byDate = new Map<string, { intensities: number[]; pressures: number[] }>();
+  entries.forEach((e) => {
+    const pressure = e.autoWeather?.pressureHpa;
+    if (pressure == null) return;
+    const bucket = byDate.get(e.date) ?? { intensities: [], pressures: [] };
+    bucket.intensities.push(e.intensity);
+    bucket.pressures.push(pressure);
+    byDate.set(e.date, bucket);
+  });
+  return [...byDate.entries()]
+    .map(([date, b]) => ({
+      date,
+      intensity: Math.max(...b.intensities),
+      pressureHpa: Math.round((b.pressures.reduce((s, p) => s + p, 0) / b.pressures.length) * 10) / 10,
+    }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
